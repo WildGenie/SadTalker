@@ -52,19 +52,15 @@ class Croper:
         shape = self.predictor(img_np, d)
         #         print("Part 0: {}, Part 1: {} ...".format(shape.part(0), shape.part(1)))
         t = list(shape.parts())
-        a = []
-        for tt in t:
-            a.append([tt.x, tt.y])
-        lm = np.array(a)
-        # lm is a shape=(68,2) np.array
-        return lm
+        a = [[tt.x, tt.y] for tt in t]
+        return np.array(a)
 
     def align_face(self, img, lm, output_size=1024):
         """
         :param filepath: str
         :return: PIL Image
         """
-        lm_chin = lm[0: 17]  # left-right
+        lm_chin = lm[:17]
         lm_eyebrow_left = lm[17: 22]  # left-right
         lm_eyebrow_right = lm[22: 27]  # left-right
         lm_nose = lm[27: 31]  # top-down
@@ -112,7 +108,7 @@ class Croper:
                 min(crop[3] + border, img.size[1]))
         if crop[2] - crop[0] < img.size[0] or crop[3] - crop[1] < img.size[1]:
             # img = img.crop(crop)
-            quad -= crop[0:2]
+            quad -= crop[:2]
 
         # Pad.
         pad = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))), int(np.ceil(max(quad[:, 0]))),
@@ -199,7 +195,7 @@ def read_video(filename, uplimit=100):
         if cnt >= uplimit:
             break
     cap.release()
-    assert len(frames) > 0, f'{filename}: video with no frames!'
+    assert frames, f'{filename}: video with no frames!'
     return frames
 
 
@@ -226,7 +222,7 @@ def create_images(video_name, frames):
     os.makedirs(images_dir, exist_ok=True)
     for i, _frame in enumerate(frames):
         _frame = cv2.resize(_frame, (height, width), interpolation=cv2.INTER_LINEAR)
-        _frame_path = os.path.join(images_dir, str(i)+'.jpg')
+        _frame_path = os.path.join(images_dir, f'{str(i)}.jpg')
         cv2.imwrite(_frame_path, _frame)
 
 def run(data):
@@ -247,15 +243,9 @@ def run(data):
 
 
 def get_data_path(video_dir):
-    eg_video_files = ['/apdcephfs/share_1290939/quincheng/datasets/HDTF/backup_fps25/WDA_KatieHill_000.mp4']
-    # filenames = list()
-    # VIDEO_EXTENSIONS_LOWERCASE = {'mp4'}
-    # VIDEO_EXTENSIONS = VIDEO_EXTENSIONS_LOWERCASE.union({f.upper() for f in VIDEO_EXTENSIONS_LOWERCASE})
-    # extensions = VIDEO_EXTENSIONS
-    # for ext in extensions:
-    #     filenames = sorted(glob.glob(f'{opt.input_dir}/**/*.{ext}'))
-    # print('Total number of videos:', len(filenames))
-    return eg_video_files
+    return [
+        '/apdcephfs/share_1290939/quincheng/datasets/HDTF/backup_fps25/WDA_KatieHill_000.mp4'
+    ]
 
 
 def get_wra_data_path(video_dir):
@@ -295,5 +285,5 @@ if __name__ == '__main__':
     args_list = cycle([opt])
     device_ids = opt.device_ids.split(",")
     device_ids = cycle(device_ids)
-    for data in tqdm(pool.imap_unordered(run, zip(filenames, args_list, device_ids))):
+    for _ in tqdm(pool.imap_unordered(run, zip(filenames, args_list, device_ids))):
         None

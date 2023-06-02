@@ -62,9 +62,9 @@ class CropAndExtract():
         pic_size = 256
         pic_name = os.path.splitext(os.path.split(input_path)[-1])[0]  
 
-        landmarks_path =  os.path.join(save_dir, pic_name+'_landmarks.txt') 
-        coeff_path =  os.path.join(save_dir, pic_name+'.mat')  
-        png_path =  os.path.join(save_dir, pic_name+'.png')  
+        landmarks_path = os.path.join(save_dir, f'{pic_name}_landmarks.txt')
+        coeff_path = os.path.join(save_dir, f'{pic_name}.mat')
+        png_path = os.path.join(save_dir, f'{pic_name}.png')  
 
         #load input
         if not os.path.isfile(input_path):
@@ -109,7 +109,7 @@ class CropAndExtract():
             crop_info = ((ox2 - ox1, oy2 - oy1), None, None)
 
         frames_pil = [Image.fromarray(cv2.resize(frame,(pic_size, pic_size))) for frame in x_full_frames]
-        if len(frames_pil) == 0:
+        if not frames_pil:
             print('No face is detected in the input file')
             return None, None
 
@@ -132,7 +132,7 @@ class CropAndExtract():
                 frame = frames_pil[idx]
                 W,H = frame.size
                 lm1 = lm[idx].reshape([-1, 2])
-            
+
                 if np.mean(lm1) == -1:
                     lm1 = (self.lm3d_std[:, :2]+1)/2.
                     lm1 = np.concatenate(
@@ -142,16 +142,16 @@ class CropAndExtract():
                     lm1[:, -1] = H - 1 - lm1[:, -1]
 
                 trans_params, im1, lm1, _ = align_img(frame, lm1, self.lm3d_std)
- 
+
                 trans_params = np.array([float(item) for item in np.hsplit(trans_params, 5)]).astype(np.float32)
                 im_t = torch.tensor(np.array(im1)/255., dtype=torch.float32).permute(2, 0, 1).to(self.device).unsqueeze(0)
-                
+
                 with torch.no_grad():
                     full_coeff = self.net_recon(im_t)
                     coeffs = split_coeff(full_coeff)
 
                 pred_coeff = {key:coeffs[key].cpu().numpy() for key in coeffs}
- 
+
                 pred_coeff = np.concatenate([
                     pred_coeff['exp'], 
                     pred_coeff['angle'],
