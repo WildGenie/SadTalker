@@ -124,7 +124,7 @@ class AnimateFromCoeff():
 
         source_image=x['source_image'].type(torch.FloatTensor)
         source_semantics=x['source_semantics'].type(torch.FloatTensor)
-        target_semantics=x['target_semantics_list'].type(torch.FloatTensor) 
+        target_semantics=x['target_semantics_list'].type(torch.FloatTensor)
         source_image=source_image.to(self.device)
         source_semantics=source_semantics.to(self.device)
         target_semantics=target_semantics.to(self.device)
@@ -160,26 +160,24 @@ class AnimateFromCoeff():
             video.append(image)
         result = img_as_ubyte(video)
 
-        ### the generated video is 256x256, so we  keep the aspect ratio, 
-        original_size = crop_info[0]
-        if original_size:
+        if original_size := crop_info[0]:
             result = [ cv2.resize(result_i,(256, int(256.0 * original_size[1]/original_size[0]) )) for result_i in result ]
-        
+
         video_name = x['video_name']  + '.mp4'
-        path = os.path.join(video_save_dir, 'temp_'+video_name)
-        
+        path = os.path.join(video_save_dir, f'temp_{video_name}')
+
         imageio.mimsave(path, result,  fps=float(25))
 
         av_path = os.path.join(video_save_dir, video_name)
         return_path = av_path 
-        
-        audio_path =  x['audio_path'] 
+
+        audio_path =  x['audio_path']
         audio_name = os.path.splitext(os.path.split(audio_path)[-1])[0]
-        new_audio_path = os.path.join(video_save_dir, audio_name+'.wav')
+        new_audio_path = os.path.join(video_save_dir, f'{audio_name}.wav')
         start_time = 0
         # cog will not keep the .mp3 filename
         sound = AudioSegment.from_file(audio_path)
-        frames = frame_num 
+        frames = frame_num
         end_time = start_time + frames*1/25*1000
         word1=sound.set_frame_rate(16000)
         word = word1[start_time:end_time]
@@ -201,13 +199,13 @@ class AnimateFromCoeff():
         #### paste back then enhancers
         if enhancer:
             video_name_enhancer = x['video_name']  + '_enhanced.mp4'
-            enhanced_path = os.path.join(video_save_dir, 'temp_'+video_name_enhancer)
-            av_path_enhancer = os.path.join(video_save_dir, video_name_enhancer) 
+            enhanced_path = os.path.join(video_save_dir, f'temp_{video_name_enhancer}')
+            av_path_enhancer = os.path.join(video_save_dir, video_name_enhancer)
             return_path = av_path_enhancer
             enhanced_images = face_enhancer(full_video_path, method=enhancer, bg_upsampler=background_enhancer)
 
             imageio.mimsave(enhanced_path, enhanced_images, fps=float(25))
-            
+
             save_video_with_watermark(enhanced_path, new_audio_path, av_path_enhancer, watermark= False)
             print(f'The generated video is named {video_save_dir}/{video_name_enhancer}')
             os.remove(enhanced_path)
